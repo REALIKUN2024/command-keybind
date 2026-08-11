@@ -31,7 +31,8 @@ public final class ConfigManager {
 	public void load() {
 		if (Files.exists(this.configPath)) {
 			try {
-				String json = Files.readString(this.configPath, StandardCharsets.UTF_8);
+				byte[] bytes = Files.readAllBytes(this.configPath);
+				String json = new String(bytes, StandardCharsets.UTF_8);
 				ModConfig parsed = this.gson.fromJson(json, ModConfig.class);
 				this.config = parsed != null ? parsed : new ModConfig();
 				this.config.setBindings(this.config.getBindings());
@@ -50,7 +51,7 @@ public final class ConfigManager {
 		try {
 			Files.createDirectories(this.configPath.getParent());
 			String json = this.gson.toJson(this.config);
-			Files.writeString(this.configPath, json, StandardCharsets.UTF_8);
+			Files.write(this.configPath, json.getBytes(StandardCharsets.UTF_8));
 		} catch (IOException e) {
 			Constants.LOGGER.error("Failed to save config to {}", this.configPath, e);
 		}

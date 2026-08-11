@@ -12,5 +12,6 @@ pluginManagement {
 rootProject.name = 'command-keybind'
 
 include 'common'
+include 'mod-1_16'
 include 'mod-26_1'
 include 'mod-26_2'
