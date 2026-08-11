@@ -1,0 +1,18 @@
+{
+	"key.commandkeybind.open_menu": "打开指令快捷键配置",
+	"key.category.command-keybind.command-keybind": "指令快捷键",
+	"commandkeybind.screen.title": "指令快捷键",
+	"commandkeybind.screen.edit.title": "编辑指令 - %s",
+	"commandkeybind.screen.name_label": "名称",
+	"commandkeybind.screen.name_hint": "绑定名称",
+	"commandkeybind.screen.interval_label": "间隔(tick)",
+	"commandkeybind.screen.interval_hint": "0",
+	"commandkeybind.screen.add_binding": "添加绑定",
+	"commandkeybind.screen.add_command": "添加指令",
+	"commandkeybind.screen.edit": "编辑",
+	"commandkeybind.screen.delete": "删除",
+	"commandkeybind.screen.binding_name": "绑定 %s",
+	"commandkeybind.screen.unbound": "未绑定",
+	"commandkeybind.screen.capture": "请按键...",
+	"commandkeybind.chat.executed": "已执行 %s"
+}

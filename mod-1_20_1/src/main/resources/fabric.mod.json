@@ -1,0 +1,30 @@
+{
+	"schemaVersion": 1,
+	"id": "command-keybind",
+	"version": "${version}",
+	"name": "Command Keybind",
+	"description": "Bind keys to quickly execute pre-configured commands.",
+	"authors": [
+		"REALIKUN2024"
+	],
+	"license": "CC0-1.0",
+	"icon": "assets/command-keybind/icon.png",
+	"environment": "client",
+	"entrypoints": {
+		"main": [
+			"com.example.keyboardcommands.KeyboardCommands"
+		],
+		"client": [
+			"com.example.keyboardcommands.KeyboardCommandsClient"
+		]
+	},
+	"depends": {
+		"fabricloader": ">=0.14.0",
+		"minecraft": ">=1.20 <1.20.2",
+		"java": ">=17",
+		"fabric-api": "*"
+	},
+	"suggests": {
+		"modmenu": "*"
+	}
+}

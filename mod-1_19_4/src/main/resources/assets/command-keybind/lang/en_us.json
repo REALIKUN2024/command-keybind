@@ -1,0 +1,18 @@
+{
+	"key.commandkeybind.open_menu": "Open Command Keybind Config",
+	"key.category.command-keybind.command-keybind": "Command Keybind",
+	"commandkeybind.screen.title": "Command Keybind",
+	"commandkeybind.screen.edit.title": "Edit Commands - %s",
+	"commandkeybind.screen.name_label": "Name",
+	"commandkeybind.screen.name_hint": "Binding Name",
+	"commandkeybind.screen.interval_label": "Interval (tick)",
+	"commandkeybind.screen.interval_hint": "0",
+	"commandkeybind.screen.add_binding": "Add Binding",
+	"commandkeybind.screen.add_command": "Add Command",
+	"commandkeybind.screen.edit": "Edit",
+	"commandkeybind.screen.delete": "Del",
+	"commandkeybind.screen.binding_name": "Binding %s",
+	"commandkeybind.screen.unbound": "Unbound",
+	"commandkeybind.screen.capture": "Press a key...",
+	"commandkeybind.chat.executed": "Executed %s"
+}
