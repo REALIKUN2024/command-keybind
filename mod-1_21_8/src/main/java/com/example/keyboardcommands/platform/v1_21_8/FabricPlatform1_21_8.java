@@ -1,0 +1,128 @@
+package com.example.keyboardcommands.platform.v1_21_8;
+
+import com.example.keyboardcommands.Constants;
+import com.example.keyboardcommands.api.BoundKey;
+import com.example.keyboardcommands.api.Platform;
+import com.example.keyboardcommands.gui.ConfigScreen;
+import com.mojang.blaze3d.platform.InputConstants;
+import java.nio.file.Path;
+import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
+import net.fabricmc.loader.api.FabricLoader;
+import net.minecraft.client.KeyMapping;
+import net.minecraft.client.Minecraft;
+import net.minecraft.network.chat.Component;
+
+/**
+ * Minecraft 1.21.8 平台实现（官方映射）。
+ *
+ * <p>差异：发指令用 {@code LocalPlayer.chat}，发消息用
+ * {@code displayClientMessage}，按键注册走 keybinding.v1 包，
+ * KeyMapping 分类为字符串。</p>
+ */
+public final class FabricPlatform1_21_8 implements Platform {
+
+	/** 本模组专属按键分类（字符串形式，显示名用翻译键 key.categories.command_keybind）。 */
+	public static final String CATEGORY = "key.categories.command_keybind";
+
+	private static Minecraft minecraft() {
+		return Minecraft.getInstance();
+	}
+
+	@Override
+	public Path getConfigDir() {
+		return FabricLoader.getInstance().getConfigDir();
+	}
+
+	@Override
+	public BoundKey createKey(String name, String defaultKeyName, boolean showInControls) {
+		InputConstants.Key defaultKey = parseKey(defaultKeyName);
+		KeyMapping keyMapping = new KeyMapping(name, defaultKey.getType(), defaultKey.getValue(), CATEGORY);
+		if (showInControls) {
+			KeyBindingHelper.registerKeyBinding(keyMapping);
+		}
+		return new FabricBoundKey(keyMapping);
+	}
+
+	private static InputConstants.Key parseKey(String name) {
+		if (name == null || name.isEmpty()) {
+			return InputConstants.UNKNOWN;
+		}
+		try {
+			return InputConstants.getKey(name);
+		} catch (IllegalArgumentException e) {
+			return InputConstants.UNKNOWN;
+		}
+	}
+
+	@Override
+	public void sendCommand(String command) {
+		if (minecraft().player == null) {
+			return;
+		}
+		String cmd = command.trim();
+		if (cmd.isEmpty()) {
+			return;
+		}
+		if (cmd.startsWith("/")) {
+			cmd = cmd.substring(1);
+		}
+		minecraft().player.connection.sendCommand(cmd);
+	}
+
+	@Override
+	public void sendSystemMessage(String translationKey, Object... args) {
+		if (minecraft().player == null) {
+			return;
+		}
+		minecraft().player.displayClientMessage(Component.translatable(translationKey, args), false);
+	}
+
+	@Override
+	public void openConfigScreen() {
+		minecraft().setScreen(new ConfigScreen(minecraft().screen));
+	}
+
+	/** {@link BoundKey} 的 1.16 实现，包装原版 {@link KeyMapping}。 */
+	private static final class FabricBoundKey implements BoundKey {
+		private final KeyMapping keyMapping;
+
+		private FabricBoundKey(KeyMapping keyMapping) {
+			this.keyMapping = keyMapping;
+		}
+
+		@Override
+		public String getName() {
+			return this.keyMapping.getName();
+		}
+
+		@Override
+		public boolean consumeClick() {
+			return this.keyMapping.consumeClick();
+		}
+
+		@Override
+		public boolean isUnbound() {
+			return this.keyMapping.isUnbound();
+		}
+
+		@Override
+		public void setKey(String saveName) {
+			this.keyMapping.setKey(parseKey(saveName));
+		}
+
+		@Override
+		public void setUnbound() {
+			this.keyMapping.setKey(InputConstants.UNKNOWN);
+		}
+
+		@Override
+		public String getKeyName() {
+			return this.keyMapping.saveString();
+		}
+
+		@Override
+		public String getDisplayName() {
+			return this.keyMapping.getTranslatedKeyMessage().getString();
+		}
+	}
+}
