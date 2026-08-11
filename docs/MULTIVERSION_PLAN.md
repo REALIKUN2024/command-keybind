@@ -1,128 +1,105 @@
-﻿# 多版本构建方案 C：多子工程聚合
+﻿# 多版本构建方案 C：多子工程聚合（1.16.1 ~ 26.2 稳定版）
 
-> 本文档记录"一条命令构建所有 MC 版本"的最终架构方案，供将来多版本支持时直接参考执行。
-> 当前阶段仍使用**单工程**（方案 A），本文件仅作为升级蓝图，暂不实施。
+> 本文件是"一条命令构建全部 MC 版本"的执行蓝图与分组表。
+> 已按调研结果修正：11 个编译基准组，组内小版本共用同一 jar。
 
 ## 一、目标
 
-在将来需要同时支持多个 Minecraft 版本时，用 **一条 `./gradlew build` 命令产出所有版本的 mod jar**。
+支持 Minecraft 1.16.1 ~ 26.2 的**稳定版**（不含 1.19.0 / 测试版 / 快照），一条 `./gradlew build` 产出全部 jar。
 
-## 二、前提条件
+## 二、核心原理：intermediary 兼容
 
-1. 机器上安装所需**全部 JDK 版本**：
-   - MC 26.1 → JDK 25（已装：`C:\Program Files\Java\jdk-25.0.3`）
-   - MC 1.21.x → JDK 21（已装：`C:\Program Files\Java\jdk-21.0.10`）
-   - 其他版本按需。
-2. 每个子模块在 `build.gradle` 中声明 **Gradle Toolchain**，让 Gradle 自动选择对应 JDK：
-   ```gradle
-   java {
-       toolchain {
-           languageVersion = JavaLanguageVersion.of(25)  // 各子模块不同
-       }
-   }
-   ```
-3. 子模块之间必须**构建隔离**：不要用 `includeBuild` 互相引用，避免 JDK 冲突；共享代码走 `common` 模块。
+- 混淆版（≤1.21.11）模组针对 Fabric **intermediary 映射**编译，该映射在小版本间保持稳定，只要相关 API 没变，同一份 jar 可跑多个小版本。
+- 26.1+ 为官方未混淆命名空间，与混淆版**不可共用产物**。
+- 官方不保证 100% 兼容，组内其余小版本需**至少启动实测一次**。
 
-## 三、目标目录结构
+## 三、版本分组表（编译基准 = 该组唯一需编译的版本）
+
+| 组 | 覆盖版本 | 编译基准 | 强制拆组原因 |
+|---|---|---|---|
+| A | 1.16.1–1.16.5 | **1.16.5** | `player.chat(String)` 发指令；`displayClientMessage(Component,false)`；`render(PoseStack)`；`addButton` |
+| B | 1.17–1.18.2 | **1.18.2** | `addRenderableWidget`（1.17+）；JDK≥17 |
+| C | 1.19.1–1.19.2 | **1.19.2** | `LocalPlayer.sendCommand(String,Component)` |
+| D | 1.19.3–1.19.4 | **1.19.4** | `ClientPacketListener.sendCommand(String)` |
+| E | 1.20.0–1.20.1 | **1.20.1** | `render(GuiGraphics)`（GuiGraphics 1.20 引入） |
+| F | 1.20.2–1.20.6 | **1.20.6** | `mouseScrolled` 4 参化（1.20.2）；1.20.3/1.20.4 映射哈希相同铁定兼容 |
+| G | 1.21.0–1.21.8 | **1.21.8** | 与 F 无断裂，`sendCommand` 混淆名恒为 `c` |
+| H | 1.21.9–1.21.10 | **1.21.10** | 输入事件重构（KeyEvent/MouseButtonEvent）；`KeyMapping.Category` |
+| I | 1.21.11 | **1.21.11** | `init(int,int)`；新 Screen 构造；最后混淆版 |
+| J | 26.1 | **26.1** | 官方未混淆命名 + `extractRenderState`/`GuiGraphicsExtractor` + `net.fabricmc.fabric-loom` |
+| K | 26.2 | **26.2** | `Gui.setScreen`、Font 绘制移除、Gui/Hud 重组 |
+
+> 放弃 1.19.0：其 `sendCommand(MessageSigner,String,Component)` 签名独一无二，代价高收益低。
+
+## 四、前提条件
+
+1. 统一 **Gradle 9.5 + JDK 25 跑 Gradle**；各子模块用 **Java Toolchain** 指定编译目标：
+   - A → Java 8；B/C/D/E/F/G → Java 17；H/I/J/K → Java 21/25
+2. 机器已装 JDK：8（已装）、17（已装）、21（已装）、25（已装）。
+3. 插件 ID：
+   - 26.x（非混淆）→ `net.fabricmc.fabric-loom`
+   - ≤1.21.11（混淆）→ `net.fabricmc.fabric-loom-remap`
+   - 混淆子项目依赖用 `modImplementation`，非混淆用 `implementation`。
+
+## 五、目录结构
 
 ```
 command-keybind/
-├── settings.gradle             ← 根聚合：include 各子模块
-├── build.gradle                ← 根聚合配置（subprojects 统一配置）
-├── gradle.properties           ← 公共属性（org.gradle.jvmargs 等）
-├── common/                     ← 共享业务逻辑（零 MC 依赖，唯一共享代码）
+├── settings.gradle
+├── build.gradle
+├── gradle.properties
+├── common/                          ← 零 MC 依赖（纯 Java）
 │   └── src/main/java/com/example/keyboardcommands/
-│       ├── api/                ← 平台抽象层 Platform.java、VersionProvider.java
-│       ├── config/             ← 数据模型 + ConfigManager
-│       ├── input/              ← BindingManager（按键监听、指令执行）
-│       └── gui/                ← ConfigScreen、EditCommandsScreen
-├── mod-26_1/                   ← 26.1 版实现
-│   ├── build.gradle            ← toolchain=25 + 依赖 common
-│   └── src/client/java/com/example/keyboardcommands/platform/v26_1/
-│       └── FabricPlatform26_1.java
-│       └── KeyboardCommandsClient.java      ← ClientModInitializer 入口
-│       └── KeyboardCommands.java            ← main 入口
-│   └── src/main/resources/
-│       └── fabric.mod.json
-├── mod-1_21_4/                 ← 将来新增的 1.21.4 实现（示例）
-│   ├── build.gradle            ← toolchain=21 + 依赖 common
-│   └── src/client/java/.../platform/v1_21_4/FabricPlatform1_21_4.java
-│   └── src/main/resources/fabric.mod.json
-└── docs/
-    ├── IMPLEMENTATION_PLAN.md
-    └── UI_DESIGN.md
+│       ├── api/                     ← Platform、BoundKey 纯接口
+│       ├── config/                  ← BindingEntry、ModConfig、ConfigManager
+│       └── input/BindingManager.java← 按键逻辑（不 import net.minecraft）
+├── mod-26_1/                        ← J 组（现有代码迁移至此）
+├── mod-26_2/                        ← K 组
+├── mod-1_21_11/                     ← I 组（后续）
+└── ...
 ```
 
-## 四、关键配置要点
+## 六、common 模块边界（零 MC 依赖）
 
-### 4.1 settings.gradle（根）
-```gradle
-pluginManagement {
-    repositories {
-        maven { name = 'Fabric'; url = 'https://maven.fabricmc.net/' }
-        mavenCentral()
-        gradlePluginPortal()
-    }
-}
-rootProject.name = 'command-keybind'
-include 'common'
-include 'mod-26_1'
-// 将来：include 'mod-1_21_4'
-```
+- `api/Platform`、`api/BoundKey`：纯接口，方法签名无 MC 类型。
+- `config/`：数据模型 + Gson 读写。
+- `input/BindingManager`：按键检测与指令队列逻辑，不 import `net.minecraft`，通过回调/接口获得"是否在游戏内、是否打开界面"。
+- **GUI 不下沉 common**：各版本模块内各自实现（Screen API 各段不同）。
 
-### 4.2 common/build.gradle
-```gradle
-plugins { id 'java' }
-java { toolchain { languageVersion = JavaLanguageVersion.of(25) } }
-// 不声明 MC / Fabric 依赖 —— common 必须零 MC 依赖
-```
+## 七、各版本模块职责
 
-### 4.3 mod-26_1/build.gradle
-```gradle
-plugins {
-    id 'net.fabricmc.fabric-loom' version "${loom_version}"
-}
-repositories { /* Fabric maven 等 */ }
-dependencies {
-    implementation project(':common')
-    implementation "net.fabricmc:fabric-loader:${loader_version}"
-    implementation "net.fabricmc.fabric-api:fabric-api:${fabric_api_version_26_1}"
-    compileOnly files("D:/Downloads/modmenu-18.0.0.jar")
-}
-loom {
-    splitEnvironmentSourceSets()
-    mods { "command-keybind" { sourceSet sourceSets.main; sourceSet sourceSets.client } }
-}
-processResources {
-    // 依赖 fabric.mod.json 中 ${version} 展开
-}
-```
+每个 `mod-XX` 子工程：
+1. `FabricPlatformXX`（实现 `common.api.Platform`）：配置目录、发指令、发消息、开界面、建/注册按键。
+2. `ConfigScreen` / `EditCommandsScreen`（该版本控件 API）。
+3. `KeyboardCommandsClient`（ClientModInitializer）。
+4. `KeyboardCommands`（main 入口，仅常量）。
+5. `fabric.mod.json` + `assets/command-keybind/lang/*.json`。
 
-### 4.4 mod-1_21_4/build.gradle（将来）
-同上，但：
-- `toolchain = JavaLanguageVersion.of(21)`
-- `fabric_api_version_1_21_4` 用对应版本
-- 依赖 `modmenu` 对应旧版 jar
-- fabric.mod.json 中 `"environment": "client"`、版本号按各自规则
+版本差异速查：
+| 能力 | A(1.16) | E(1.20) | I(1.21.11) | J(26.1) | K(26.2) |
+|---|---|---|---|---|---|
+| 发指令 | `player.chat(s)` | `conn.sendCommand(s)` | 同左 | 同左 | 同左 |
+| 发消息 | `displayClientMessage` | `sendSystemMessage` | 同左 | 同左 | 同左 |
+| GUI 渲染 | `render(PoseStack)` | `render(GuiGraphics)` | 同左 | `extractRenderState(GuiGraphicsExtractor)` | 同左+Font/Gui 重组 |
+| Screen 输入 | `keyPressed(int,int,int)` | 同左 | `keyPressed(KeyEvent)` | 同左 | 同左 |
+| 按键注册 | fabric-key-mapping-api（对应版本） | 同左 | 同左 | 同左 | 同左 |
 
-## 五、从当前单工程升级到 C 的迁移步骤
+## 八、Fabric 依赖版本矩阵（来自 maven.fabricmc.net）
 
-1. 在 `gradle.properties` 中拆分各版本独立属性（如 `fabric_api_version_26_1`、`fabric_api_version_1_21_4`）。
-2. 新建 `common/` 目录，把现有 `src/client/java/com/example/keyboardcommands/` 下的 **api / config / input / gui** 四个包原样移动过去。
-3. 新建 `mod-26_1/`，把客户端入口类（`KeyboardCommandsClient`、`KeyboardCommands`）与 `platform/v26_1/` 实现、`fabric.mod.json`、资源文件移过去。
-4. 根 `settings.gradle` 改为 `include` 结构。
-5. 根 `build.gradle` 改为聚合配置（`subprojects` 统一属性）。
-6. `mod-26_1` 的 `dependencies` 改为 `implementation project(':common')`。
-7. 构建验证：`./gradlew build`（会依次编译 common → 各子模块）。
-8. **业务代码零改动**——`common` 内不出现任何 `net.minecraft` / `net.fabricmc` 类引用。
+| MC | 最后 Fabric API | Loader | 最小 Java |
+|---|---|---|---|
+| 1.16.x | `0.42.0+1.16` | 0.19.3 | 8 |
+| 1.17.x | `0.46.1+1.17` | 0.19.3 | 16 |
+| 1.18.x | `0.77.0+1.18.2` | 0.19.3 | 17 |
+| 1.19.x | `0.87.2+1.19.4` | 0.19.3 | 17 |
+| 1.20.x | `0.99.4+1.20.6` | 0.19.3 | 17 |
+| 1.21.x | `0.141.6+1.21.11` | 0.19.3 | 21 |
+| 26.1 | `0.155.2+26.1.2` | 0.19.3 | 25 |
+| 26.2 | `0.157.0+26.2` | 0.19.3 | 25 |
 
-## 六、注意事项
+## 九、决策记录
 
-- **共享代码纯净性**：`common` 内严禁 import 任何 `net.minecraft.*` 或 `net.fabricmc.*` 类，这是升级成败的关键。所有版本相关调用必须走 `api/Platform` 接口。
-- **GUI 控件的版本差异**：`Screen`、`Button`、`EditBox` 等控件在不同版本 API 有差异（26.1 用 `GuiGraphicsExtractor`、旧版用 `GuiGraphics`）。若 UI 也要跨版本共享，`gui` 包需要做第二层适配（`ui/` 子接口）；否则 UI 也可下沉到各子模块实现。**当前设计：UI 留在 common，若移植时控件 API 差异过大，再将 UI 迁到各版本模块。**
-- **JDK 切换**：即使配置了 toolchain，首次构建某版本时 Gradle 会下载/查找对应 JDK（需已在系统安装并配置 `org.gradle.java.installations.paths` 或自动探测）。
-- **ModMenu 依赖**：各子模块需要对应 MC 版本的 ModMenu jar，版本不同不能共用。
-
-## 七、决策记录
-
-- 2026-08-11：确定采用方案 C 蓝图，当前仍按方案 A 单工程开发，避免过早引入多 JDK 复杂度；待第二个版本需求出现时按本文件执行升级。
+- 2026-08-11：确定方案 C，版本范围 1.16.1~26.2 稳定版，放弃 1.19.0。
+- 2026-08-11：修正架构——GUI 与 BindingManager 的 MC 依赖不下沉 common。
+- 2026-08-11：采纳 11 组编译基准分组（基于逐版本映射表比对）。
+- 2026-08-11：执行策略——先落地 common + 26.1/26.2 验证流水线，再扩展其余组。

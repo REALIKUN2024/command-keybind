@@ -1,0 +1,17 @@
+plugins {
+	id 'java-library'
+}
+
+java {
+	toolchain {
+		languageVersion = JavaLanguageVersion.of(25)
+	}
+	withSourcesJar()
+}
+
+dependencies {
+	// 仅依赖 slf4j-api 用于日志（运行时由 Fabric Loader 提供实现）
+	api "org.slf4j:slf4j-api:2.0.17"
+	// Gson（运行时由 MC 提供，编译期声明避免直接依赖 MC jar）
+	api "com.google.code.gson:gson:2.13.2"
+}
