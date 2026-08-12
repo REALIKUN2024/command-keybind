@@ -38,6 +38,11 @@ processResources {
 	}
 }
 
+jar {
+	duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+	from project(':common').sourceSets.main.output
+}
+
 remapJar {
 	archiveFileName = "command-keybind-${project.version}-mc${project.minecraft_version_1_21_11}.jar"
 }
