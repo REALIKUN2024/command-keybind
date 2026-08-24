@@ -1,4 +1,4 @@
-﻿# 多版本构建方案 C：多子工程聚合（1.16.1 ~ 26.2 稳定版）
+# 多版本构建方案 C：多子工程聚合（1.16.1 ~ 26.2 稳定版）
 
 > 本文件是"一条命令构建全部 MC 版本"的执行蓝图与分组表。
 > 已按调研结果修正：11 个编译基准组，组内小版本共用同一 jar。
@@ -34,7 +34,8 @@
 ## 四、前提条件
 
 1. 统一 **Gradle 9.5 + JDK 25 跑 Gradle**；各子模块用 **Java Toolchain** 指定编译目标：
-   - A → Java 8；B/C/D/E/F/G → Java 17；H/I/J/K → Java 21/25
+   - A → Java 8；B/C/D/E → Java 17；F(1.20.2~1.20.6) → Java 21（1.20.5+ 官方要求 Java 21，故 1.20.6 实际用 21，与早期表格的 17 不同）；G/H/I → Java 21；J/K → Java 25
+   - 缺失 toolchain 可由 Gradle 自动下载（settings.gradle 配置 foojay resolver）
 2. 机器已装 JDK：8（已装）、17（已装）、21（已装）、25（已装）。
 3. 插件 ID：
    - 26.x（非混淆）→ `net.fabricmc.fabric-loom`
@@ -103,3 +104,8 @@ command-keybind/
 - 2026-08-11：修正架构——GUI 与 BindingManager 的 MC 依赖不下沉 common。
 - 2026-08-11：采纳 11 组编译基准分组（基于逐版本映射表比对）。
 - 2026-08-11：执行策略——先落地 common + 26.1/26.2 验证流水线，再扩展其余组。
+- 2026-08-11：全部 11 个编译基准组落地并构建通过；common 增加 JUnit 单元测试（16 例）。
+- 2026-08-11：ModMenu 集成补齐至全部版本——根工程 `:downloadModMenu` 任务从 Modrinth CDN 自动下载各版本对应 ModMenu jar（版本见根 build.gradle 的 modmenuJars 表），compileOnly 引用，不打包进产物。
+- 2026-08-11：legacy（≤1.21.8）Controls 分类键统一为 `key.category.command-keybind.command-keybind`（与 1.21.10+ 的 KeyMapping.Category 同键），修复分类名无法本地化问题。
+- 2026-08-11：legacy（1.16~1.21.8）补齐鼠标按键捕获（mouseClicked），与 1.21.10+ 行为一致。
+- 2026-08-11：CI 修复——工具链经 foojay 自动下载、ModMenu 先下载后构建、产物按各模块 build/libs 收集。

@@ -16,13 +16,16 @@
 		],
 		"client": [
 			"com.example.keyboardcommands.KeyboardCommandsClient"
+		],
+		"modmenu": [
+			"com.example.keyboardcommands.gui.ModMenuCompat"
 		]
 	},
 	"depends": {
 		"fabricloader": ">=0.12.0",
 		"minecraft": "~1.16",
 		"java": ">=8",
-		"fabric-api": "*"
+		"fabric": "*"
 	},
 	"suggests": {
 		"modmenu": "*"

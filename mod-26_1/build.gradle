@@ -30,13 +30,9 @@ dependencies {
 
 	implementation project(':common')
 
-	// ModMenu (optional dependency, used to add a config screen entry)
-	def modmenuJar = file("${rootProject.projectDir}/libs/modmenu-18.0.0.jar")
-	if (modmenuJar.exists()) {
-		compileOnly files(modmenuJar)
-	} else {
-		compileOnly files("D:/Downloads/modmenu-${project.modmenu_version}.jar")
-	}
+	// ModMenu (optional compileOnly, auto-downloaded by root :downloadModMenu)
+	compileOnly files(rootProject.modmenuJarFor(project.minecraft_version_26_1)).builtBy(rootProject.tasks.named('downloadModMenu'))
+
 }
 
 processResources {

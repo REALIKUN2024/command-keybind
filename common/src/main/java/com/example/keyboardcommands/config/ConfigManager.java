@@ -37,6 +37,13 @@ public final class ConfigManager {
 				this.config = parsed != null ? parsed : new ModConfig();
 				this.config.setBindings(this.config.getBindings());
 				this.config.setOpenMenuKey(this.config.getOpenMenuKey());
+				// 规范化条目：手改 JSON 时字段可能为 null / 负数，统一走 setter 兜底
+				for (BindingEntry entry : this.config.getBindings()) {
+					entry.setName(entry.getName());
+					entry.setKey(entry.getKey());
+					entry.setCommands(entry.getCommands());
+					entry.setIntervalTicks(entry.getIntervalTicks());
+				}
 				return;
 			} catch (IOException | RuntimeException e) {
 				Constants.LOGGER.error("Failed to load config {}, falling back to default", this.configPath, e);

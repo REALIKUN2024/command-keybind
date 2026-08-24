@@ -18,3 +18,61 @@ subprojects {
 		it.options.encoding = 'UTF-8'
 	}
 }
+
+// ---------------------------------------------------------------------------
+// ModMenu 依赖清单（compileOnly，可选依赖）。
+// 单一事实来源：各 MC 稳定版对应的最新 ModMenu release（查询自 Modrinth API）。
+// jar 由 :downloadModMenu 任务自动下载到 libs/modmenu/<mc>/modmenu-<ver>.jar，
+// 不提交到仓库（见 .gitignore 的 libs/）。
+// ---------------------------------------------------------------------------
+def modmenuJars = [
+	'1.16.5':  ['1.16.23', 'https://cdn.modrinth.com/data/mOgUt4GM/versions/1.16.23/modmenu-1.16.23.jar'],
+	'1.18.2':  ['3.2.5',   'https://cdn.modrinth.com/data/mOgUt4GM/versions/nVxObSbX/modmenu-3.2.5.jar'],
+	'1.19.2':  ['4.1.2',   'https://cdn.modrinth.com/data/mOgUt4GM/versions/V4hnfgRO/modmenu-4.1.2.jar'],
+	'1.19.4':  ['6.3.1',   'https://cdn.modrinth.com/data/mOgUt4GM/versions/lMqXEzUw/modmenu-6.3.1.jar'],
+	'1.20.1':  ['7.2.2',   'https://cdn.modrinth.com/data/mOgUt4GM/versions/lEkperf6/modmenu-7.2.2.jar'],
+	'1.20.6':  ['10.0.0',  'https://cdn.modrinth.com/data/mOgUt4GM/versions/HLa8flfl/modmenu-10.0.0.jar'],
+	'1.21.8':  ['15.0.2',  'https://cdn.modrinth.com/data/mOgUt4GM/versions/ku5NivOP/modmenu-15.0.2.jar'],
+	'1.21.10': ['16.0.1',  'https://cdn.modrinth.com/data/mOgUt4GM/versions/pYbFlVtR/modmenu-16.0.1.jar'],
+	'1.21.11': ['17.0.0',  'https://cdn.modrinth.com/data/mOgUt4GM/versions/Tyk71iSw/modmenu-17.0.0.jar'],
+	'26.1':    ['18.0.0',  'https://cdn.modrinth.com/data/mOgUt4GM/versions/3rsoV1bk/modmenu-18.0.0.jar'],
+	'26.2':    ['20.0.1',  'https://cdn.modrinth.com/data/mOgUt4GM/versions/njXb639R/modmenu-20.0.1.jar'],
+]
+
+def modmenuDir = file("${rootProject.projectDir}/libs/modmenu")
+
+tasks.register('downloadModMenu') {
+	group = 'build setup'
+	description = 'Downloads ModMenu jars (compileOnly) for all supported MC versions into libs/modmenu/'
+	outputs.dir modmenuDir
+	doLast {
+		modmenuJars.each { mc, verUrl ->
+			def (ver, url) = verUrl
+			def target = new File(modmenuDir, "${mc}/modmenu-${ver}.jar")
+			if (!target.exists()) {
+				target.parentFile.mkdirs()
+				logger.lifecycle("downloadModMenu: downloading ModMenu {} for MC {} ...", ver, mc)
+				try {
+					def conn = new URL(url).openConnection()
+					conn.connectTimeout = 15000
+					conn.readTimeout = 120000
+					conn.inputStream.withCloseable { ins ->
+						target.withOutputStream { outs -> ins.transferTo(outs) }
+					}
+				} catch (Exception e) {
+					target.delete()
+					throw new GradleException("Failed to download ModMenu jar for MC ${mc}: ${e.message}", e)
+				}
+			}
+		}
+	}
+}
+
+// 子模块调用：返回该 MC 版本对应的 ModMenu jar 文件路径。
+ext.modmenuJarFor = { String mcVersion ->
+	def entry = modmenuJars[mcVersion]
+	if (entry == null) {
+		throw new GradleException("No ModMenu jar configured for MC version ${mcVersion}")
+	}
+	return new File(modmenuDir, "${mcVersion}/modmenu-${entry[0]}.jar")
+}

@@ -27,6 +27,10 @@ dependencies {
 	modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version_1_16}"
 
 	implementation project(':common')
+
+	// ModMenu (optional; modCompileOnly 以便 loom 重映射到本模块命名空间，auto-downloaded by root :downloadModMenu)
+	modCompileOnly files(rootProject.modmenuJarFor(project.minecraft_version_1_16)).builtBy(rootProject.tasks.named('downloadModMenu'))
+
 }
 
 processResources {
@@ -35,6 +39,17 @@ processResources {
 
 	filesMatching("fabric.mod.json") {
 		expand "version": version
+	}
+}
+
+// 1.16 的 fabric-resource-loader 仅读取 mod 根路径 getRootPath()（dev 模式 classpath 第一个路径 = classes，
+// 不含资源），导致语言文件等资源在 dev 运行时不加载。将资源复制进 classes 目录以修复。
+classes {
+	doLast {
+		copy {
+			from sourceSets.main.resources
+			into layout.buildDirectory.dir('classes/java/main')
+		}
 	}
 }
 

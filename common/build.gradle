@@ -16,4 +16,12 @@ dependencies {
 	api "org.slf4j:slf4j-api:2.0.17"
 	// Gson（运行时由 MC 提供，编译期声明避免直接依赖 MC jar）
 	api "com.google.code.gson:gson:2.13.2"
+
+	// 单元测试：common 零 MC 依赖，可在 JVM 直接运行
+	testImplementation "org.junit.jupiter:junit-jupiter:5.10.2"
+	testRuntimeOnly "org.junit.platform:junit-platform-launcher:1.10.2"
+}
+
+test {
+	useJUnitPlatform()
 }

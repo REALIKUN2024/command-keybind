@@ -9,7 +9,7 @@
 - 游戏内配置界面，加绑定、删绑定、改名称、改按键都在里面完成
 - 配置存 `config/command-keybind.json`，手改也行
 - "打开配置菜单"按键默认 K，注册进原版按键设置，归在独立分类下
-- 装了 ModMenu 的话，模组列表里会有配置入口
+- 装了 ModMenu 的话，模组列表里会有配置入口（全部版本均支持）
 
 ## 支持版本
 
@@ -25,13 +25,21 @@
 
 ## 构建
 
-装好各版本对应的 JDK（1.16 用 Java 8，26.x 用 Java 21+，具体见各子工程 `build.gradle` 的 toolchain），然后：
+装好各版本对应的 JDK（1.16 用 Java 8，26.x 用 Java 21+，具体见各子工程 `build.gradle` 的 toolchain；缺失的 toolchain 可由 Gradle 自动下载），然后：
 
 ```
 gradlew build
 ```
 
 一条命令，全部版本的 jar 一起出，产物在各自模块的 `build/libs/` 下。
+
+首次构建会自动从 Modrinth CDN 下载各版本对应的 ModMenu jar 到 `libs/modmenu/`（仅编译期引用，不打包、不影响无 ModMenu 运行），需要联网；之后有本地缓存。
+
+common 模块含 JUnit 单元测试（配置读写/容错、按键与指令队列逻辑），构建时自动运行：
+
+```
+gradlew :common:test
+```
 
 ## 配置文件示例
 

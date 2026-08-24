@@ -9,6 +9,11 @@ pluginManagement {
 	}
 }
 
+plugins {
+	// 缺失的 JDK toolchain（8/17/21）由 Gradle 自动下载，CI 与本地一致
+	id 'org.gradle.toolchains.foojay-resolver-convention' version '1.0.0'
+}
+
 rootProject.name = 'command-keybind'
 
 include 'common'
