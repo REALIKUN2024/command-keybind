@@ -22,8 +22,8 @@ import net.minecraft.network.chat.TranslatableComponent;
  */
 public final class FabricPlatform1_18 implements Platform {
 
-	/** 本模组专属按键分类（字符串形式，显示名用翻译键 key.categories.command_keybind）。 */
-	public static final String CATEGORY = "key.categories.command_keybind";
+	/** 本模组专属按键分类（字符串形式，显示名用翻译键 key.category.command-keybind.command-keybind，与 1.21.10+ 的 KeyMapping.Category 同键）。 */
+	public static final String CATEGORY = "key.category.command-keybind.command-keybind";
 
 	private static Minecraft minecraft() {
 		return Minecraft.getInstance();
@@ -64,8 +64,10 @@ public final class FabricPlatform1_18 implements Platform {
 		if (cmd.isEmpty()) {
 			return;
 		}
-		if (cmd.startsWith("/")) {
-			cmd = cmd.substring(1);
+		// 1.18 无 ClientPacketListener.sendCommand：执行指令需 chat("/cmd")，
+		// 由服务端按消息首字符 '/' 解析为指令。剥离前缀会导致当作聊天消息发送。
+		if (!cmd.startsWith("/")) {
+			cmd = "/" + cmd;
 		}
 		minecraft().player.chat(cmd);
 	}
@@ -83,7 +85,7 @@ public final class FabricPlatform1_18 implements Platform {
 		minecraft().setScreen(new ConfigScreen(minecraft().screen));
 	}
 
-	/** {@link BoundKey} 的 1.16 实现，包装原版 {@link KeyMapping}。 */
+	/** {@link BoundKey} 的 1.18 实现，包装原版 {@link KeyMapping}。 */
 	private static final class FabricBoundKey implements BoundKey {
 		private final KeyMapping keyMapping;
 
@@ -109,6 +111,8 @@ public final class FabricPlatform1_18 implements Platform {
 		@Override
 		public void setKey(String saveName) {
 			this.keyMapping.setKey(parseKey(saveName));
+			// setKey 只改 this.key、不更新静态 MAP（按键事件按 MAP 查找），须 resetMapping 重建 MAP
+			KeyMapping.resetMapping();
 		}
 
 		@Override

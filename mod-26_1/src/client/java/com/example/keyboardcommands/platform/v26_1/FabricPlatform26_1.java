@@ -90,7 +90,7 @@ public final class FabricPlatform26_1 implements Platform {
 		minecraft().setScreen(new ConfigScreen(minecraft().screen));
 	}
 
-	/** {@link BoundKey} �?26.1 实现，包装原�?{@link KeyMapping}�?*/
+	/** {@link BoundKey} 的 26.1 实现，包装原版 {@link KeyMapping}。 */
 	private static final class FabricBoundKey implements BoundKey {
 		private final KeyMapping keyMapping;
 

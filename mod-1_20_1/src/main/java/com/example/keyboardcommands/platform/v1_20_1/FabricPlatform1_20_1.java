@@ -21,8 +21,8 @@ import net.minecraft.network.chat.Component;
  */
 public final class FabricPlatform1_20_1 implements Platform {
 
-	/** 本模组专属按键分类（字符串形式，显示名用翻译键 key.categories.command_keybind）。 */
-	public static final String CATEGORY = "key.categories.command_keybind";
+	/** 本模组专属按键分类（字符串形式，显示名用翻译键 key.category.command-keybind.command-keybind，与 1.21.10+ 的 KeyMapping.Category 同键）。 */
+	public static final String CATEGORY = "key.category.command-keybind.command-keybind";
 
 	private static Minecraft minecraft() {
 		return Minecraft.getInstance();
@@ -82,7 +82,7 @@ public final class FabricPlatform1_20_1 implements Platform {
 		minecraft().setScreen(new ConfigScreen(minecraft().screen));
 	}
 
-	/** {@link BoundKey} 的 1.16 实现，包装原版 {@link KeyMapping}。 */
+	/** {@link BoundKey} 的 1.20.1 实现，包装原版 {@link KeyMapping}。 */
 	private static final class FabricBoundKey implements BoundKey {
 		private final KeyMapping keyMapping;
 
@@ -108,6 +108,8 @@ public final class FabricPlatform1_20_1 implements Platform {
 		@Override
 		public void setKey(String saveName) {
 			this.keyMapping.setKey(parseKey(saveName));
+			// setKey 只改 this.key、不更新静态 MAP（按键事件按 MAP 查找），须 resetMapping 重建 MAP
+			KeyMapping.resetMapping();
 		}
 
 		@Override
