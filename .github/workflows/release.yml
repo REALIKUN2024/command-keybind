@@ -1,0 +1,58 @@
+# 打 tag（如 v1.0.0）时自动构建并发布 GitHub Release，
+# 附带全部 11 个版本的 jar 与支持版本对照表。
+
+name: release
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: checkout repository
+        uses: actions/checkout@v6
+      - name: validate gradle wrapper
+        uses: gradle/actions/wrapper-validation@v6
+      - name: setup jdk
+        uses: actions/setup-java@v5
+        with:
+          java-version: '25'
+          distribution: 'microsoft'
+      - name: make gradle wrapper executable
+        run: chmod +x ./gradlew
+      - name: build
+        run: ./gradlew clean build
+      - name: generate release body
+        run: |
+          VER="${GITHUB_REF_NAME#v}"
+          cat > /tmp/body.md <<EOF
+          ## 支持版本
+
+          | Jar | 支持的 Minecraft 版本 |
+          |---|---|
+          | command-keybind-${VER}-mc1.16.1-1.16.5.jar | 1.16.1 ~ 1.16.5 |
+          | command-keybind-${VER}-mc1.17-1.18.2.jar | 1.17 ~ 1.18.2 |
+          | command-keybind-${VER}-mc1.19.1-1.19.2.jar | 1.19.1 ~ 1.19.2 |
+          | command-keybind-${VER}-mc1.19.3-1.19.4.jar | 1.19.3 ~ 1.19.4 |
+          | command-keybind-${VER}-mc1.20-1.20.1.jar | 1.20.0 ~ 1.20.1 |
+          | command-keybind-${VER}-mc1.20.2-1.20.6.jar | 1.20.2 ~ 1.20.6 |
+          | command-keybind-${VER}-mc1.21-1.21.8.jar | 1.21.0 ~ 1.21.8 |
+          | command-keybind-${VER}-mc1.21.9-1.21.10.jar | 1.21.9 ~ 1.21.10 |
+          | command-keybind-${VER}-mc1.21.11.jar | 1.21.11 |
+          | command-keybind-${VER}-mc26.1.jar | 26.1 线 |
+          | command-keybind-${VER}-mc26.2.jar | 26.2 线 |
+
+          纯客户端 Fabric 模组：按你的 Minecraft 版本选择对应 jar 放入 mods 文件夹（需 Fabric Loader + Fabric API）。
+          同名 jar 支持版本范围内的所有小版本；装到范围外版本会被 Fabric Loader 拒绝。
+          EOF
+      - name: create release
+        uses: softprops/action-gh-release@v2
+        with:
+          body_path: /tmp/body.md
+          files: |
+            mod-*/build/libs/command-keybind-*.jar
+            common/build/libs/*.jar

@@ -48,5 +48,5 @@ jar {
 }
 
 remapJar {
-	archiveFileName = "command-keybind-${project.version}-mc${project.minecraft_version_1_19_4}.jar"
+	archiveFileName = "command-keybind-${project.version}-mc1.19.3-1.19.4.jar"
 }
