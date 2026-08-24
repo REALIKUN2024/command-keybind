@@ -151,7 +151,8 @@ public class EditCommandsScreen extends Screen {
 
 		@Override
 		public int getRowWidth() {
-			return 340;
+			// 行宽随屏幕宽度自适应：1.20.6+ 的 GUI 宽度较大（960+），固定 340 占比过小导致行内容偏右
+			return Math.max(200, this.width - 80);
 		}
 
 		private final class Entry extends ContainerObjectSelectionList.Entry<Entry> {
@@ -172,12 +173,12 @@ public class EditCommandsScreen extends Screen {
 			}
 
 			@Override
-			public void render(GuiGraphics graphics, int index, int y, int width, int itemHeight, int rowLeft, int mouseX, int mouseY, boolean hovered, float a) {
+			public void render(GuiGraphics graphics, int index, int y, int rowLeft, int rowWidth, int itemHeight, int mouseX, int mouseY, boolean hovered, float a) {
 				int rowY = y - 2;
 				this.commandBox.setY(rowY);
 				this.commandBox.setX(rowLeft);
 				this.commandBox.render(graphics, mouseX, mouseY, a);
-				int bx = rowLeft + width - 10 - this.deleteButton.getWidth();
+				int bx = CommandList.this.scrollBarX() - 10 - this.deleteButton.getWidth();
 				this.deleteButton.setPosition(bx, rowY);
 				this.deleteButton.render(graphics, mouseX, mouseY, a);
 			}

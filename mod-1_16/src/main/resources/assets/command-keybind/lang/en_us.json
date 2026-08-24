@@ -14,5 +14,6 @@
 	"commandkeybind.screen.binding_name": "Binding %s",
 	"commandkeybind.screen.unbound": "Unbound",
 	"commandkeybind.screen.capture": "Press a key...",
+	"commandkeybind.screen.empty": "No bindings yet",
 	"commandkeybind.chat.executed": "Executed %s"
 }

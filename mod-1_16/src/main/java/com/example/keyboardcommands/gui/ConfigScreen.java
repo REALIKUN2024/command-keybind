@@ -21,9 +21,11 @@ import net.minecraft.network.chat.TextComponent;
 import net.minecraft.network.chat.TranslatableComponent;
 
 /**
- * 1.19.2 主配置界面：列出所有按键绑定条目，支持添加、删除、改键、编辑指令。
+ * 1.16 主配置界面：列出所有按键绑定条目，支持添加、删除、改键、编辑指令。
  *
- * <p>1.19.2 无 StringWidget，文字用 GuiComponent.drawString 绘制；Button 用构造式。</p>
+ * <p>1.16 无 StringWidget，文字用 GuiComponent.drawString 绘制；Button 用构造式。</p>
+ * <p>1.16 的 ContainerObjectSelectionList.Entry.render 参数顺序为
+ * (index, y, rowLeft, rowWidth, itemHeight, ...)，与 1.19.2+ 的 (width, itemHeight, rowLeft) 不同。</p>
  */
 public class ConfigScreen extends Screen {
 
@@ -66,15 +68,19 @@ public class ConfigScreen extends Screen {
 	}
 
 	private void repositionElements() {
-		this.list.updateSize(this.width, this.height - HEADER_HEIGHT - FOOTER_HEIGHT, HEADER_HEIGHT, ITEM_HEIGHT);
+		// 1.16 的 updateSize(int width, int height, int y0, int y1)：第 4 参是列表底部坐标，不是 itemHeight！
+		this.list.updateSize(this.width, this.height, HEADER_HEIGHT, this.height - FOOTER_HEIGHT);
 	}
 
 	@Override
 	public void render(PoseStack poseStack, int mouseX, int mouseY, float delta) {
-		this.renderBackground(poseStack);
+		// 半透明黑渐变背景（原版游戏内界面风格），避免 1.16 renderBackground 在主菜单时拉伸泥土纹理
+		this.fillGradient(poseStack, 0, 0, this.width, this.height, -1072689136, -804253680);
+		// 渲染顺序：列表先、标题与按钮后 —— 列表的顶部/底部遮罩（renderTopAndBottom）会盖住后画的标题与按钮，
+		// 与 1.16 原版（OptionsScreen 列表先行、按钮后行）保持一致。
+		this.list.render(poseStack, mouseX, mouseY, delta);
 		GuiComponent.drawCenteredString(poseStack, this.font, this.title, this.width / 2, 8, 0xFFFFFF);
 		super.render(poseStack, mouseX, mouseY, delta);
-		this.list.render(poseStack, mouseX, mouseY, delta);
 	}
 
 	@Override
@@ -90,6 +96,17 @@ public class ConfigScreen extends Screen {
 			return true;
 		}
 		return super.keyPressed(keyCode, scancode, modifiers);
+	}
+
+	@Override
+	public boolean mouseClicked(double mouseX, double mouseY, int button) {
+		if (this.selectedKeyBinding != null) {
+			this.selectedKeyBinding.setKey(InputConstants.Type.MOUSE.getOrCreate(button).getName());
+			this.selectedKeyBinding = null;
+			this.list.refreshEntries();
+			return true;
+		}
+		return super.mouseClicked(mouseX, mouseY, button);
 	}
 
 	@Override
@@ -137,6 +154,16 @@ public class ConfigScreen extends Screen {
 			return 340;
 		}
 
+		@Override
+		public void render(PoseStack poseStack, int mouseX, int mouseY, float delta) {
+			super.render(poseStack, mouseX, mouseY, delta);
+			if (this.getItemCount() == 0) {
+				GuiComponent.drawCenteredString(poseStack, this.minecraft.font,
+					new TranslatableComponent("commandkeybind.screen.empty"),
+					this.width / 2, this.y0 + this.height / 2 - 4, 0xFFFFFF);
+			}
+		}
+
 		private final class Entry extends ContainerObjectSelectionList.Entry<Entry> {
 			private final BindingEntry binding;
 			private final Button changeButton;
@@ -177,11 +204,13 @@ public class ConfigScreen extends Screen {
 				}
 			}
 
+			// 1.16 的参数顺序：(index, y, rowLeft, rowWidth, itemHeight, mouseX, mouseY, hovered, delta)
 			@Override
-			public void render(PoseStack poseStack, int index, int y, int width, int itemHeight, int rowLeft, int mouseX, int mouseY, boolean hovered, float delta) {
+			public void render(PoseStack poseStack, int index, int y, int rowLeft, int rowWidth, int itemHeight, int mouseX, int mouseY, boolean hovered, float delta) {
 				GuiComponent.drawString(poseStack, BindingList.this.minecraft.font,
 					new TextComponent(this.binding.getName()), rowLeft, y, 0xFFFFFF);
-				int rightEdge = rowLeft + width - 10;
+				// 行内按钮右边缘对齐滚动条左侧（避免与滚动条重叠）
+				int rightEdge = BindingList.this.getScrollbarPosition() - 6;
 				int bx = rightEdge;
 				bx -= this.deleteButton.getWidth();
 				this.deleteButton.x = bx;

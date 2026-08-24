@@ -18,7 +18,7 @@ import net.minecraft.network.chat.TextComponent;
 import net.minecraft.network.chat.TranslatableComponent;
 
 /**
- * 1.19.2 指令编辑界面：编辑某个绑定条目下的绑定名称、指令列表与执行间隔。
+ * 1.16 指令编辑界面：编辑某个绑定条目下的绑定名称、指令列表与执行间隔。
  */
 public class EditCommandsScreen extends Screen {
 
@@ -83,16 +83,17 @@ public class EditCommandsScreen extends Screen {
 				this.intervalBox.y = inputY2;
 
 		int listY = inputY1 + INPUT_HEIGHT + ROW_SPACING;
-		int listHeight = Math.max(ITEM_HEIGHT, inputY2 - listY - ROW_SPACING);
-		this.list.updateSize(this.width, listHeight, listY, ITEM_HEIGHT);
+		// 1.16 的 updateSize(int width, int height, int y0, int y1)：第 4 参是列表底部坐标，不是 itemHeight！
+		this.list.updateSize(this.width, this.height, listY, inputY2 - ROW_SPACING);
 	}
 
 	@Override
 	public void render(PoseStack poseStack, int mouseX, int mouseY, float delta) {
-		this.renderBackground(poseStack);
-		GuiComponent.drawCenteredString(poseStack, this.font, this.title, this.width / 2, 8, 0xFFFFFF);
-		super.render(poseStack, mouseX, mouseY, delta);
+		// 半透明黑渐变背景（原版游戏内界面风格），避免 1.16 renderBackground 在主菜单时拉伸泥土纹理
+		this.fillGradient(poseStack, 0, 0, this.width, this.height, -1072689136, -804253680);
+		// 渲染顺序：列表先、标题/标签/按钮后 —— 列表的顶部/底部遮罩会盖住后画的元素
 		this.list.render(poseStack, mouseX, mouseY, delta);
+		GuiComponent.drawCenteredString(poseStack, this.font, this.title, this.width / 2, 8, 0xFFFFFF);
 		GuiComponent.drawString(poseStack, this.font,
 			new TranslatableComponent("commandkeybind.screen.name_label"),
 			this.width / 2 - (this.font.width(new TranslatableComponent("commandkeybind.screen.name_label")) + 6 + this.nameBox.getWidth()) / 2,
@@ -101,6 +102,7 @@ public class EditCommandsScreen extends Screen {
 			new TranslatableComponent("commandkeybind.screen.interval_label"),
 			this.width / 2 - (this.font.width(new TranslatableComponent("commandkeybind.screen.interval_label")) + 6 + this.intervalBox.getWidth()) / 2,
 			this.height - FOOTER_HEIGHT - ROW_SPACING - INPUT_HEIGHT + (INPUT_HEIGHT - 9) / 2, 0xFFFFFF);
+		super.render(poseStack, mouseX, mouseY, delta);
 	}
 
 	@Override
@@ -159,13 +161,15 @@ public class EditCommandsScreen extends Screen {
 				});
 			}
 
+			// 1.16 的参数顺序：(index, y, rowLeft, rowWidth, itemHeight, mouseX, mouseY, hovered, delta)
 			@Override
-			public void render(PoseStack poseStack, int index, int y, int width, int itemHeight, int rowLeft, int mouseX, int mouseY, boolean hovered, float delta) {
+			public void render(PoseStack poseStack, int index, int y, int rowLeft, int rowWidth, int itemHeight, int mouseX, int mouseY, boolean hovered, float delta) {
 				int rowY = y - 2;
 				this.commandBox.x = rowLeft;
 				this.commandBox.y = rowY;
 				this.commandBox.render(poseStack, mouseX, mouseY, delta);
-				int bx = rowLeft + width - 10 - this.deleteButton.getWidth();
+				// 删除按钮右边缘对齐滚动条左侧（避免与滚动条重叠）
+				int bx = CommandList.this.getScrollbarPosition() - 6 - this.deleteButton.getWidth();
 				this.deleteButton.x = bx;
 				this.deleteButton.y = rowY;
 				this.deleteButton.render(poseStack, mouseX, mouseY, delta);

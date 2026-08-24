@@ -80,6 +80,17 @@ public class ConfigScreen extends Screen {
 	}
 
 	@Override
+	public boolean mouseClicked(double mouseX, double mouseY, int button) {
+		if (this.selectedKeyBinding != null) {
+			this.selectedKeyBinding.setKey(InputConstants.Type.MOUSE.getOrCreate(button).getName());
+			this.selectedKeyBinding = null;
+			this.list.refreshEntries();
+			return true;
+		}
+		return super.mouseClicked(mouseX, mouseY, button);
+	}
+
+	@Override
 	public void onClose() {
 		this.configManager.save();
 		KeyboardCommandsClient.BINDING_MANAGER.reloadBindings();
@@ -121,7 +132,8 @@ public class ConfigScreen extends Screen {
 
 		@Override
 		public int getRowWidth() {
-			return 340;
+			// 行宽随屏幕宽度自适应：1.20.6+ 的 GUI 宽度较大（960+），固定 340 占比过小导致行内容偏右
+			return Math.max(200, this.width - 80);
 		}
 
 		private final class Entry extends ContainerObjectSelectionList.Entry<Entry> {
@@ -168,10 +180,10 @@ public class ConfigScreen extends Screen {
 			}
 
 			@Override
-			public void render(GuiGraphics graphics, int index, int y, int width, int itemHeight, int rowLeft, int mouseX, int mouseY, boolean hovered, float delta) {
+			public void render(GuiGraphics graphics, int index, int y, int rowLeft, int rowWidth, int itemHeight, int mouseX, int mouseY, boolean hovered, float delta) {
 				this.nameWidget.setPosition(rowLeft, y - 2);
 				this.nameWidget.render(graphics, mouseX, mouseY, delta);
-				int rightEdge = rowLeft + width - 10;
+				int rightEdge = BindingList.this.scrollBarX() - 10;
 				int bx = rightEdge;
 				bx -= this.deleteButton.getWidth();
 				this.deleteButton.setPosition(bx, y - 2);

@@ -80,6 +80,17 @@ public class ConfigScreen extends Screen {
 	}
 
 	@Override
+	public boolean mouseClicked(double mouseX, double mouseY, int button) {
+		if (this.selectedKeyBinding != null) {
+			this.selectedKeyBinding.setKey(InputConstants.Type.MOUSE.getOrCreate(button).getName());
+			this.selectedKeyBinding = null;
+			this.list.refreshEntries();
+			return true;
+		}
+		return super.mouseClicked(mouseX, mouseY, button);
+	}
+
+	@Override
 	public void onClose() {
 		this.configManager.save();
 		KeyboardCommandsClient.BINDING_MANAGER.reloadBindings();
@@ -121,6 +132,7 @@ public class ConfigScreen extends Screen {
 
 		@Override
 		public int getRowWidth() {
+			// 与 1.16~1.20.1 一致：固定行宽，行内左侧名称、右侧按钮组
 			return 340;
 		}
 
@@ -168,10 +180,10 @@ public class ConfigScreen extends Screen {
 			}
 
 			@Override
-			public void render(GuiGraphics graphics, int index, int y, int width, int itemHeight, int rowLeft, int mouseX, int mouseY, boolean hovered, float delta) {
+			public void render(GuiGraphics graphics, int index, int y, int rowLeft, int rowWidth, int itemHeight, int mouseX, int mouseY, boolean hovered, float delta) {
+				// 与 26.1 布局一致：名称在行左，按钮组右缘 = 行右缘 - 2（等效 26.1 的 scrollBarX() - 10）
 				this.nameWidget.setPosition(rowLeft, y - 2);
-				this.nameWidget.render(graphics, mouseX, mouseY, delta);
-				int rightEdge = rowLeft + width - 10;
+				int rightEdge = rowLeft + rowWidth - 2;
 				int bx = rightEdge;
 				bx -= this.deleteButton.getWidth();
 				this.deleteButton.setPosition(bx, y - 2);
@@ -179,6 +191,7 @@ public class ConfigScreen extends Screen {
 				this.editButton.setPosition(bx, y - 2);
 				bx -= 5 + this.changeButton.getWidth();
 				this.changeButton.setPosition(bx, y - 2);
+				this.nameWidget.render(graphics, mouseX, mouseY, delta);
 				this.deleteButton.render(graphics, mouseX, mouseY, delta);
 				this.editButton.render(graphics, mouseX, mouseY, delta);
 				this.changeButton.render(graphics, mouseX, mouseY, delta);

@@ -48,6 +48,8 @@ public class EditCommandsScreen extends Screen {
 
 		this.list = new CommandList(this.minecraft, this);
 		this.addRenderableWidget(this.list);
+		// 关闭列表顶部/底部渐隐遮罩，避免遮罩盖住标题、名称输入框等外部元素
+		this.list.setRenderTopAndBottom(false);
 
 		this.intervalBox = new EditBox(this.font, 0, 0, 80, INPUT_HEIGHT, Component.empty());
 		this.intervalBox.setValue(Integer.toString(this.binding.getIntervalTicks()));
@@ -80,13 +82,14 @@ public class EditCommandsScreen extends Screen {
 				this.intervalBox.y = inputY2;
 
 		int listY = inputY1 + INPUT_HEIGHT + ROW_SPACING;
-		int listHeight = Math.max(ITEM_HEIGHT, inputY2 - listY - ROW_SPACING);
-		this.list.updateSize(this.width, listHeight, listY, ITEM_HEIGHT);
+		// 1.16~1.20.1 的 updateSize(int width, int height, int y0, int y1)：第 4 参是列表底部坐标，不是 itemHeight！
+		this.list.updateSize(this.width, this.height, listY, inputY2 - ROW_SPACING);
 	}
 
 	@Override
 	public void render(PoseStack poseStack, int mouseX, int mouseY, float delta) {
-		this.renderBackground(poseStack);
+		// 半透明黑渐变背景（原版游戏内界面风格），避免 renderBackground 在主菜单时拉伸泥土纹理
+		this.fillGradient(poseStack, 0, 0, this.width, this.height, -1072689136, -804253680);
 		GuiComponent.drawCenteredString(poseStack, this.font, this.title, this.width / 2, 8, 0xFFFFFF);
 		super.render(poseStack, mouseX, mouseY, delta);
 		GuiComponent.drawString(poseStack, this.font,
@@ -156,12 +159,12 @@ public class EditCommandsScreen extends Screen {
 			}
 
 			@Override
-			public void render(PoseStack poseStack, int index, int y, int width, int itemHeight, int rowLeft, int mouseX, int mouseY, boolean hovered, float delta) {
+			public void render(PoseStack poseStack, int index, int y, int rowLeft, int rowWidth, int itemHeight, int mouseX, int mouseY, boolean hovered, float delta) {
 				int rowY = y - 2;
 				this.commandBox.x = rowLeft;
 				this.commandBox.y = rowY;
 				this.commandBox.render(poseStack, mouseX, mouseY, delta);
-				int bx = rowLeft + width - 10 - this.deleteButton.getWidth();
+				int bx = CommandList.this.getScrollbarPosition() - 6 - this.deleteButton.getWidth();
 				this.deleteButton.x = bx;
 				this.deleteButton.y = rowY;
 				this.deleteButton.render(poseStack, mouseX, mouseY, delta);

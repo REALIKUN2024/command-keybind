@@ -14,5 +14,6 @@
 	"commandkeybind.screen.binding_name": "绑定 %s",
 	"commandkeybind.screen.unbound": "未绑定",
 	"commandkeybind.screen.capture": "请按键...",
+	"commandkeybind.screen.empty": "暂无绑定",
 	"commandkeybind.chat.executed": "已执行 %s"
 }

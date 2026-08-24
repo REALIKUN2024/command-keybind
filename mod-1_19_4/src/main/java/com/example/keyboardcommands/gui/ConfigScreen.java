@@ -51,6 +51,8 @@ public class ConfigScreen extends Screen {
 
 		this.list = new BindingList(this.minecraft, this);
 		this.addRenderableWidget(this.list);
+		// 关闭列表顶部/底部渐隐遮罩，避免遮罩盖住标题、名称输入框等外部元素
+		this.list.setRenderTopAndBottom(false);
 
 		int footerY = this.height - FOOTER_HEIGHT;
 		this.addRenderableWidget(Button.builder(Component.translatable("commandkeybind.screen.add_binding"), button -> {
@@ -66,8 +68,16 @@ public class ConfigScreen extends Screen {
 	}
 
 	@Override
+	public void render(PoseStack poseStack, int mouseX, int mouseY, float delta) {
+		// 半透明黑渐变背景（原版游戏内界面风格）
+		this.fillGradient(poseStack, 0, 0, this.width, this.height, -1072689136, -804253680);
+		super.render(poseStack, mouseX, mouseY, delta);
+	}
+
+	@Override
 	protected void repositionElements() {
-		this.list.updateSize(this.width, this.height - HEADER_HEIGHT - FOOTER_HEIGHT, HEADER_HEIGHT, ITEM_HEIGHT);
+		// 1.16~1.20.1 的 updateSize(int width, int height, int y0, int y1)：第 4 参是列表底部坐标，不是 itemHeight！
+		this.list.updateSize(this.width, this.height, HEADER_HEIGHT, this.height - FOOTER_HEIGHT);
 	}
 
 	@Override
@@ -83,6 +93,17 @@ public class ConfigScreen extends Screen {
 			return true;
 		}
 		return super.keyPressed(keyCode, scancode, modifiers);
+	}
+
+	@Override
+	public boolean mouseClicked(double mouseX, double mouseY, int button) {
+		if (this.selectedKeyBinding != null) {
+			this.selectedKeyBinding.setKey(InputConstants.Type.MOUSE.getOrCreate(button).getName());
+			this.selectedKeyBinding = null;
+			this.list.refreshEntries();
+			return true;
+		}
+		return super.mouseClicked(mouseX, mouseY, button);
 	}
 
 	@Override
@@ -174,10 +195,10 @@ public class ConfigScreen extends Screen {
 			}
 
 			@Override
-			public void render(PoseStack poseStack, int index, int y, int width, int itemHeight, int rowLeft, int mouseX, int mouseY, boolean hovered, float delta) {
+			public void render(PoseStack poseStack, int index, int y, int rowLeft, int rowWidth, int itemHeight, int mouseX, int mouseY, boolean hovered, float delta) {
 				this.nameWidget.setPosition(rowLeft, y - 2);
 				this.nameWidget.render(poseStack, mouseX, mouseY, delta);
-				int rightEdge = rowLeft + width - 10;
+				int rightEdge = BindingList.this.getScrollbarPosition() - 6;
 				int bx = rightEdge;
 				bx -= this.deleteButton.getWidth();
 				this.deleteButton.setPosition(bx, y - 2);

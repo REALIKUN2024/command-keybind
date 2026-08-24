@@ -56,6 +56,8 @@ public class EditCommandsScreen extends Screen {
 
 		this.list = new CommandList(this.minecraft, this);
 		this.addRenderableWidget(this.list);
+		// 关闭列表顶部/底部渐隐遮罩，避免遮罩盖住标题、名称输入框等外部元素
+		this.list.setRenderTopAndBottom(false);
 
 		this.intervalLabel = new StringWidget(Component.translatable("commandkeybind.screen.interval_label"), this.font);
 		this.addRenderableWidget(this.intervalLabel);
@@ -79,6 +81,13 @@ public class EditCommandsScreen extends Screen {
 	}
 
 	@Override
+	public void render(GuiGraphics graphics, int mouseX, int mouseY, float delta) {
+		// 半透明黑渐变背景（原版游戏内界面风格）；1.20 起 fillGradient 位于 GuiGraphics
+		graphics.fillGradient(0, 0, this.width, this.height, -1072689136, -804253680);
+		super.render(graphics, mouseX, mouseY, delta);
+	}
+
+	@Override
 	protected void repositionElements() {
 		int inputY1 = HEADER_HEIGHT + ROW_SPACING;
 		int inputY2 = this.height - FOOTER_HEIGHT - ROW_SPACING - INPUT_HEIGHT;
@@ -87,8 +96,8 @@ public class EditCommandsScreen extends Screen {
 		this.layoutRow(this.intervalLabel, this.intervalBox, inputY2);
 
 		int listY = inputY1 + INPUT_HEIGHT + ROW_SPACING;
-		int listHeight = Math.max(ITEM_HEIGHT, inputY2 - listY - ROW_SPACING);
-		this.list.updateSize(this.width, listHeight, listY, ITEM_HEIGHT);
+		// 1.16~1.20.1 的 updateSize(int width, int height, int y0, int y1)：第 4 参是列表底部坐标，不是 itemHeight！
+		this.list.updateSize(this.width, this.height, listY, inputY2 - ROW_SPACING);
 	}
 
 	/** 将"标签 + 输入框"作为整体水平居中放置。 */
@@ -159,11 +168,11 @@ public class EditCommandsScreen extends Screen {
 			}
 
 			@Override
-			public void render(GuiGraphics graphics, int index, int y, int width, int itemHeight, int rowLeft, int mouseX, int mouseY, boolean hovered, float delta) {
+			public void render(GuiGraphics graphics, int index, int y, int rowLeft, int rowWidth, int itemHeight, int mouseX, int mouseY, boolean hovered, float delta) {
 				int rowY = y - 2;
 				this.commandBox.setPosition(rowLeft, rowY);
 				this.commandBox.render(graphics, mouseX, mouseY, delta);
-				int bx = rowLeft + width - 10 - this.deleteButton.getWidth();
+				int bx = CommandList.this.getScrollbarPosition() - 6 - this.deleteButton.getWidth();
 				this.deleteButton.setPosition(bx, rowY);
 				this.deleteButton.render(graphics, mouseX, mouseY, delta);
 			}

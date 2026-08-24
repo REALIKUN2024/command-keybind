@@ -47,6 +47,8 @@ public class ConfigScreen extends Screen {
 	protected void init() {
 		this.list = new BindingList(this.minecraft, this);
 		this.addRenderableWidget(this.list);
+		// 关闭列表顶部/底部渐隐遮罩，避免遮罩盖住标题、名称输入框等外部元素
+		this.list.setRenderTopAndBottom(false);
 
 		int footerY = this.height - FOOTER_HEIGHT;
 		this.addRenderableWidget(new Button(this.width / 2 - 110, footerY + 8, 100, 20,
@@ -63,12 +65,14 @@ public class ConfigScreen extends Screen {
 	}
 
 	private void repositionElements() {
-		this.list.updateSize(this.width, this.height - HEADER_HEIGHT - FOOTER_HEIGHT, HEADER_HEIGHT, ITEM_HEIGHT);
+		// 1.16~1.20.1 的 updateSize(int width, int height, int y0, int y1)：第 4 参是列表底部坐标，不是 itemHeight！
+		this.list.updateSize(this.width, this.height, HEADER_HEIGHT, this.height - FOOTER_HEIGHT);
 	}
 
 	@Override
 	public void render(PoseStack poseStack, int mouseX, int mouseY, float delta) {
-		this.renderBackground(poseStack);
+		// 半透明黑渐变背景（原版游戏内界面风格），避免 renderBackground 在主菜单时拉伸泥土纹理
+		this.fillGradient(poseStack, 0, 0, this.width, this.height, -1072689136, -804253680);
 		GuiComponent.drawCenteredString(poseStack, this.font, this.title, this.width / 2, 8, 0xFFFFFF);
 		super.render(poseStack, mouseX, mouseY, delta);
 	}
@@ -86,6 +90,17 @@ public class ConfigScreen extends Screen {
 			return true;
 		}
 		return super.keyPressed(keyCode, scancode, modifiers);
+	}
+
+	@Override
+	public boolean mouseClicked(double mouseX, double mouseY, int button) {
+		if (this.selectedKeyBinding != null) {
+			this.selectedKeyBinding.setKey(InputConstants.Type.MOUSE.getOrCreate(button).getName());
+			this.selectedKeyBinding = null;
+			this.list.refreshEntries();
+			return true;
+		}
+		return super.mouseClicked(mouseX, mouseY, button);
 	}
 
 	@Override
@@ -174,10 +189,10 @@ public class ConfigScreen extends Screen {
 			}
 
 			@Override
-			public void render(PoseStack poseStack, int index, int y, int width, int itemHeight, int rowLeft, int mouseX, int mouseY, boolean hovered, float delta) {
+			public void render(PoseStack poseStack, int index, int y, int rowLeft, int rowWidth, int itemHeight, int mouseX, int mouseY, boolean hovered, float delta) {
 				GuiComponent.drawString(poseStack, BindingList.this.minecraft.font,
 					Component.literal(this.binding.getName()), rowLeft, y, 0xFFFFFF);
-				int rightEdge = rowLeft + width - 10;
+				int rightEdge = BindingList.this.getScrollbarPosition() - 6;
 				int bx = rightEdge;
 				bx -= this.deleteButton.getWidth();
 				this.deleteButton.x = bx;

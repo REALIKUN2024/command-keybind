@@ -151,7 +151,8 @@ public class EditCommandsScreen extends Screen {
 
 		@Override
 		public int getRowWidth() {
-			return 340;
+			// 行宽随屏幕宽度自适应：1.20.6+ 的 GUI 宽度较大（960+），固定 340 占比过小导致行内容偏右
+			return Math.max(200, this.width - 80);
 		}
 
 		private final class Entry extends ContainerObjectSelectionList.Entry<Entry> {
