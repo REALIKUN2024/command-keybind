@@ -31,7 +31,7 @@ dependencies {
 	implementation project(':common')
 
 	// ModMenu (optional compileOnly, auto-downloaded by root :downloadModMenu)
-	compileOnly files(rootProject.modmenuJarFor(project.minecraft_version_26_1)).builtBy(rootProject.tasks.named('downloadModMenu'))
+	compileOnly files(rootProject.modmenuJarFor(project.minecraft_version_26_1))
 
 }
 

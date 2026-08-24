@@ -29,7 +29,7 @@ dependencies {
 	implementation project(':common')
 
 	// ModMenu (optional; modCompileOnly 以便 loom 重映射到本模块命名空间，auto-downloaded by root :downloadModMenu)
-	modCompileOnly files(rootProject.modmenuJarFor(project.minecraft_version_1_21_8)).builtBy(rootProject.tasks.named('downloadModMenu'))
+	modCompileOnly files(rootProject.modmenuJarFor(project.minecraft_version_1_21_8))
 
 }
 

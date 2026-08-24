@@ -22,8 +22,9 @@ subprojects {
 // ---------------------------------------------------------------------------
 // ModMenu 依赖清单（compileOnly，可选依赖）。
 // 单一事实来源：各 MC 稳定版对应的最新 ModMenu release（查询自 Modrinth API）。
-// jar 由 :downloadModMenu 任务自动下载到 libs/modmenu/<mc>/modmenu-<ver>.jar，
-// 不提交到仓库（见 .gitignore 的 libs/）。
+// jar 下载到 libs/modmenu/<mc>/modmenu-<ver>.jar，不提交到仓库（见 .gitignore 的 libs/）。
+// 注意：必须在「配置阶段」确保 jar 存在——loom 在配置阶段就会对 modCompileOnly
+// 依赖的文件计算 checksum，若依赖执行阶段的任务会因文件缺失而失败（CI 全新检出时）。
 // ---------------------------------------------------------------------------
 def modmenuJars = [
 	'1.16.5':  ['1.16.23', 'https://cdn.modrinth.com/data/mOgUt4GM/versions/1.16.23/modmenu-1.16.23.jar'],
@@ -41,38 +42,27 @@ def modmenuJars = [
 
 def modmenuDir = file("${rootProject.projectDir}/libs/modmenu")
 
-tasks.register('downloadModMenu') {
-	group = 'build setup'
-	description = 'Downloads ModMenu jars (compileOnly) for all supported MC versions into libs/modmenu/'
-	outputs.dir modmenuDir
-	doLast {
-		modmenuJars.each { mc, verUrl ->
-			def (ver, url) = verUrl
-			def target = new File(modmenuDir, "${mc}/modmenu-${ver}.jar")
-			if (!target.exists()) {
-				target.parentFile.mkdirs()
-				logger.lifecycle("downloadModMenu: downloading ModMenu {} for MC {} ...", ver, mc)
-				try {
-					def conn = new URL(url).openConnection()
-					conn.connectTimeout = 15000
-					conn.readTimeout = 120000
-					conn.inputStream.withCloseable { ins ->
-						target.withOutputStream { outs -> ins.transferTo(outs) }
-					}
-				} catch (Exception e) {
-					target.delete()
-					throw new GradleException("Failed to download ModMenu jar for MC ${mc}: ${e.message}", e)
-				}
-			}
-		}
-	}
-}
-
-// 子模块调用：返回该 MC 版本对应的 ModMenu jar 文件路径。
+// 子模块调用：返回该 MC 版本对应的 ModMenu jar 文件路径；缺失时立即下载（配置阶段）。
 ext.modmenuJarFor = { String mcVersion ->
 	def entry = modmenuJars[mcVersion]
 	if (entry == null) {
 		throw new GradleException("No ModMenu jar configured for MC version ${mcVersion}")
 	}
-	return new File(modmenuDir, "${mcVersion}/modmenu-${entry[0]}.jar")
+	def target = new File(modmenuDir, "${mcVersion}/modmenu-${entry[0]}.jar")
+	if (!target.exists()) {
+		target.parentFile.mkdirs()
+		logger.lifecycle("ModMenu {} for MC {} not found, downloading ...", entry[0], mcVersion)
+		try {
+			def conn = new URL(entry[1]).openConnection()
+			conn.connectTimeout = 15000
+			conn.readTimeout = 120000
+			conn.inputStream.withCloseable { ins ->
+				target.withOutputStream { outs -> ins.transferTo(outs) }
+			}
+		} catch (Exception e) {
+			target.delete()
+			throw new GradleException("Failed to download ModMenu jar for MC ${mcVersion}: ${e.message}", e)
+		}
+	}
+	return target
 }
